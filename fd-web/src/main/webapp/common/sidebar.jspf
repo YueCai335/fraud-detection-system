@@ -1,0 +1,44 @@
+<%
+    String username_sb = (String) session.getAttribute("username");
+    String activePage = (String) request.getAttribute("activePage");
+    if (activePage == null) activePage = "";
+    if (username_sb == null) username_sb = "";
+%>
+
+<div class="sidebar shadow-sm sidebar-wrap">
+
+    <div>
+        <div class="brand">
+            Fraud <span class="brand-accent">Detection</span>
+        </div>
+
+        <div class="user">
+            Signed in as<br/>
+            <b><%= username_sb.length() == 0 ? "Guest" : username_sb %></b>
+        </div>
+
+        <div class="nav-title">Navigation</div>
+
+        <a class="nav-link-custom <%= "home".equals(activePage) ? "active" : "" %>"
+           href="<%=request.getContextPath()%>/home">Home</a>
+
+        <a class="nav-link-custom <%= "predict".equals(activePage) ? "active" : "" %>"
+           href="<%=request.getContextPath()%>/predict">Single Prediction</a>
+
+        <a class="nav-link-custom <%= "batch".equals(activePage) ? "active" : "" %>"
+           href="<%=request.getContextPath()%>/batch">Batch Prediction</a>
+
+        <a class="nav-link-custom <%= "guide".equals(activePage) ? "active" : "" %>"
+           href="<%=request.getContextPath()%>/guide">Guide</a>
+
+        <a class="nav-link-custom <%= "about".equals(activePage) ? "active" : "" %>"
+           href="<%=request.getContextPath()%>/about">About</a>
+    </div>
+
+    <div class="sidebar-footer">
+        <form method="get" action="<%=request.getContextPath()%>/logout">
+            <button class="btn-logout w-100" type="submit">Logout</button>
+        </form>
+    </div>
+
+</div>

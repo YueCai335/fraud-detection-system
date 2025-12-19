@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="http://java.sun.com/xml/ns/javaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://java.sun.com/xml/ns/javaee
+                             http://java.sun.com/xml/ns/javaee/web-app_3_0.xsd"
+         version="3.0">
+
+  <display-name>fd-web</display-name>
+
+  <!-- Predict -->
+  <servlet>
+    <servlet-name>PredictServlet</servlet-name>
+    <servlet-class>ec.fraud.web.servlet.PredictServlet</servlet-class>
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>PredictServlet</servlet-name>
+    <url-pattern>/predict</url-pattern>
+  </servlet-mapping>
+
+  <!-- Batch -->
+  <servlet>
+    <servlet-name>BatchServlet</servlet-name>
+    <servlet-class>ec.fraud.web.servlet.BatchServlet</servlet-class>
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>BatchServlet</servlet-name>
+    <url-pattern>/batch</url-pattern>
+  </servlet-mapping>
+
+  <!-- Batch Download -->
+  <servlet>
+    <servlet-name>BatchDownloadServlet</servlet-name>
+    <servlet-class>ec.fraud.web.servlet.BatchDownloadServlet</servlet-class>
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>BatchDownloadServlet</servlet-name>
+    <url-pattern>/batch-download</url-pattern>
+  </servlet-mapping>
+
+  <!-- Register -->
+  <servlet>
+    <servlet-name>RegisterServlet</servlet-name>
+    <servlet-class>ec.fraud.web.servlet.RegisterServlet</servlet-class>
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>RegisterServlet</servlet-name>
+    <url-pattern>/register</url-pattern>
+  </servlet-mapping>
+
+  <!-- Login -->
+  <servlet>
+    <servlet-name>LoginServlet</servlet-name>
+    <servlet-class>ec.fraud.web.servlet.LoginServlet</servlet-class>
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>LoginServlet</servlet-name>
+    <url-pattern>/login</url-pattern>
+  </servlet-mapping>
+
+  <servlet>
+    <servlet-name>HomeServlet</servlet-name>
+    <servlet-class>ec.fraud.web.servlet.HomeServlet</servlet-class>
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>HomeServlet</servlet-name>
+    <url-pattern>/home</url-pattern>
+  </servlet-mapping>
+
+  <servlet>
+    <servlet-name>LogoutServlet</servlet-name>
+    <servlet-class>ec.fraud.web.servlet.LogoutServlet</servlet-class>
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>LogoutServlet</servlet-name>
+    <url-pattern>/logout</url-pattern>
+  </servlet-mapping>
+
+  <servlet>
+    <servlet-name>GuideServlet</servlet-name>
+    <servlet-class>ec.fraud.web.servlet.GuideServlet</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>GuideServlet</servlet-name>
+    <url-pattern>/guide</url-pattern>
+  </servlet-mapping>
+
+
+
+</web-app>

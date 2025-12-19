@@ -1,0 +1,74 @@
+/* ===== Global page style ===== */
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background-color: #f4f6f8;
+    margin: 0;
+    padding: 0;
+}
+
+/* ===== Center container ===== */
+.container {
+    width: 360px;
+    margin: 100px auto;
+    background: #ffffff;
+    padding: 30px;
+    border-radius: 6px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* ===== Title ===== */
+.container h2 {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+/* ===== Form layout ===== */
+.form-group {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: bold;
+}
+
+input[type="text"],
+input[type="password"] {
+    width: 100%;
+    padding: 8px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+/* ===== Button ===== */
+button {
+    width: 100%;
+    padding: 10px;
+    background-color: #0078d4;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #005fa3;
+}
+
+/* ===== Footer link ===== */
+.footer {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.footer a {
+    color: #0078d4;
+    text-decoration: none;
+}
+
+.footer a:hover {
+    text-decoration: underline;
+}
