@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fraud Detection</title>
+</head>
+<body>
+
+  <h2>Single Transaction Prediction</h2>
+
+  <form id="predictForm">
+    <label>step <input name="step" value="1"></label><br>
+    <label>type_code <input name="type_code" value="2"></label><br>
+    <label>amount <input name="amount" value="181.0"></label><br>
+
+    <label>oldbalanceOrg <input name="oldbalanceOrg" value="181.0"></label><br>
+    <label>newbalanceOrig <input name="newbalanceOrig" value="0.0"></label><br>
+
+    <label>oldbalanceDest <input name="oldbalanceDest" value="0.0"></label><br>
+    <label>newbalanceDest <input name="newbalanceDest" value="0.0"></label><br>
+
+    <label>balanceDiffOrg <input name="balanceDiffOrg" value="181.0"></label><br>
+    <label>balanceDiffDest <input name="balanceDiffDest" value="0.0"></label><br>
+
+    <button type="submit">Predict</button>
+  </form>
+
+  <h3>Result</h3>
+  <pre id="result">(no result yet)</pre>
+
+  <script>
+    document.getElementById("predictForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const form = e.target;
+      const payload = {
+        step: Number(form.step.value),
+        type_code: Number(form.type_code.value),
+        amount: Number(form.amount.value),
+        oldbalanceOrg: Number(form.oldbalanceOrg.value),
+        newbalanceOrig: Number(form.newbalanceOrig.value),
+        oldbalanceDest: Number(form.oldbalanceDest.value),
+        newbalanceDest: Number(form.newbalanceDest.value),
+        balanceDiffOrg: Number(form.balanceDiffOrg.value),
+        balanceDiffDest: Number(form.balanceDiffDest.value),
+      };
+
+      const resultEl = document.getElementById("result");
+      resultEl.textContent = "Loading...";
+
+      try {
+        const resp = await fetch("/api/predict", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await resp.json();
+        resultEl.textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        resultEl.textContent = String(err);
+      }
+    });
+  </script>
+
+</body>
+</html>
