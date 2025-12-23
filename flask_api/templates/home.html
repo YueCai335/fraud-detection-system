@@ -1,0 +1,48 @@
+{% extends "layout.html" %}
+{% set active_page = "home" %}
+
+{% block title %}Fraud Detection - Home{% endblock %}
+
+{% block content %}
+  <div class="card shadow-sm">
+    <div class="card-body p-4">
+      <div class="text-muted" style="font-weight: 700; letter-spacing: 0.02em;">
+        PaySim-Based Fraud Detection System
+      </div>
+
+      <h4 class="section-title mb-1 mt-1">Home</h4>
+      <div class="accent-bar"></div>
+
+      <p class="text-muted mt-3 mb-0">
+        Predict fraud risk for PaySim-style transactions using a deployed RandomForest model,
+        supporting both single input and (coming soon) batch CSV analysis with explainable results.
+      </p>
+    </div>
+  </div>
+
+  <div class="row g-4 mt-2">
+    <div class="col-12 col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-body p-4">
+          <h5 class="section-title mb-3">Single Prediction</h5>
+          <p class="text-muted">
+            Enter transaction fields, predict fraud (YES/NO), and see top reasons behind the decision.
+          </p>
+          <a class="btn btn-dark btn-lg w-100" href="/single">Start Single Prediction</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-body p-4">
+          <h5 class="section-title mb-3">Batch CSV Prediction</h5>
+          <p class="text-muted">
+            Upload a CSV file to predict fraud for multiple transactions, preview results, and download output.
+          </p>
+          <a class="btn btn-dark btn-lg w-100" href="/batch">Start Batch Prediction</a>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

@@ -1,0 +1,345 @@
+{% extends "layout.html" %}
+{% set active_page = "batch" %}
+{% block title %}Fraud Detection - Batch Prediction{% endblock %}
+
+{% block content %}
+<style>
+  .accent-bar.small { width: 42px; height: 3px; }
+
+  .hint-box {
+    background: rgba(220, 215, 201, 0.35);
+    border: 1px solid rgba(162, 123, 92, 0.35);
+    border-left: 6px solid #A27B5C;
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+
+  .btn-upload {
+    padding: 14px 40px;
+    font-weight: 900;
+    font-size: 17px;
+    border-radius: 12px;
+    min-width: 320px;
+  }
+
+  .mono { font-family: Consolas, monospace; }
+
+  .table thead th {
+    background: rgba(162, 123, 92, 0.18);
+    color: #2C3930;
+    border-bottom: 1px solid rgba(162, 123, 92, 0.40);
+    white-space: nowrap;
+  }
+
+  .threshold-note {
+    font-size: 12px;
+    opacity: 0.8;
+    margin-top: 10px;
+  }
+</style>
+
+<!-- Header -->
+<div class="card shadow-sm">
+  <div class="card-body p-4">
+    <div class="text-muted" style="font-weight:700;letter-spacing:0.02em;">
+      PaySim-Based Fraud Detection System
+    </div>
+    <h4 class="section-title mb-1 mt-1">Batch CSV Prediction</h4>
+    <div class="accent-bar"></div>
+
+    <p class="text-muted mt-3 mb-0">
+      Upload a CSV file to run bulk predictions. Preview shows the first 10 rows only.
+    </p>
+  </div>
+</div>
+
+<div class="row g-3 mt-0">
+
+  <!-- Card 1: Upload -->
+  <div class="col-12">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h5 class="section-title mb-2">Upload CSV</h5>
+        <div class="accent-bar small"></div>
+
+        <div class="alert alert-warning mt-3 mb-0">
+          <b>Attention:</b> CSV columns must strictly match the required format, otherwise parsing may fail.
+        </div>
+
+        <div class="hint-box mt-3">
+          Required columns (header must match exactly):
+          <code>step</code>, <code>type_code</code>, <code>amount</code>,
+          <code>oldbalanceOrg</code>, <code>newbalanceOrig</code>,
+          <code>oldbalanceDest</code>, <code>newbalanceDest</code>.
+          <br/>
+          Note: <code>balanceDiffOrg</code> and <code>balanceDiffDest</code> are computed automatically.
+        </div>
+
+        <!-- Upload form -->
+        <form id="batchForm" class="mt-3">
+          <div class="row g-3">
+
+            <div class="col-12">
+              <label class="form-label" style="font-weight:700;color:#2C3930;">
+                Select CSV file
+              </label>
+
+              <!-- Hidden native file input -->
+              <input
+                type="file"
+                id="csvFileInput"
+                name="file"
+                accept=".csv"
+                required
+                style="display:none"
+              />
+
+              <!-- Custom button + file name -->
+              <div class="d-flex align-items-center gap-3">
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary"
+                  onclick="document.getElementById('csvFileInput').click();">
+                  Choose CSV File
+                </button>
+
+                <span id="csvFileName" class="text-muted">
+                  No file selected
+                </span>
+              </div>
+            </div>
+
+            <!-- Upload button -->
+            <div class="col-12 text-center mt-2">
+              <button class="btn btn-dark btn-upload" type="submit">
+                Upload & Predict
+              </button>
+            </div>
+
+          </div>
+        </form>
+
+        <!-- Status / Error -->
+        <div id="batchStatus" class="alert alert-success mt-3 mb-0" style="display:none;"></div>
+        <div id="batchError" class="alert alert-danger mt-3 mb-0" style="display:none;"></div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Card 2: Preview -->
+  <div class="col-12">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h5 class="section-title mb-2">Preview (Top 10)</h5>
+        <div class="accent-bar small"></div>
+
+        <div class="text-muted mt-3">
+          Fraud is shown as YES/NO. Probability is shown as a percentage.
+          <div class="threshold-note">
+            Threshold used: <span id="uiThreshold">0.25</span>
+          </div>
+        </div>
+
+        <div id="noPreview" class="hint-box mt-3">
+          No results yet. Upload a CSV file to see predictions here.
+        </div>
+
+        <div class="table-responsive mt-3" id="previewWrap" style="display:none;">
+          <table class="table table-sm align-middle mb-0">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>CSV Row</th>
+                <th>step</th>
+                <th>type_code</th>
+                <th>amount</th>
+                <th>oldbalanceOrg</th>
+                <th>newbalanceOrig</th>
+                <th>oldbalanceDest</th>
+                <th>newbalanceDest</th>
+                <th>Fraud?</th>
+                <th>Probability</th>
+              </tr>
+            </thead>
+            <tbody id="previewBody"></tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Card 3: Download -->
+  <div class="col-12 mb-4">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h5 class="section-title mb-2">Download Full Result CSV</h5>
+        <div class="accent-bar small"></div>
+
+        <div id="noDownload" class="hint-box mt-3">
+          Download will be available after you upload and predict.
+        </div>
+
+        <div id="downloadReady" style="display:none;">
+          <div class="hint-box mt-3">
+            Your full result file is ready.
+          </div>
+
+          <div class="mt-3">
+            <a class="btn btn-dark" id="downloadLink" href="#">
+              Download full prediction CSV
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const fileInput = document.getElementById("csvFileInput");
+  const fileNameSpan = document.getElementById("csvFileName");
+
+  fileInput.addEventListener("change", function () {
+    if (fileInput.files.length > 0) {
+      fileNameSpan.textContent = fileInput.files[0].name;
+    } else {
+      fileNameSpan.textContent = "No file selected";
+    }
+  });
+
+  function showError(msg) {
+    const el = document.getElementById("batchError");
+    el.innerHTML = "<b>Error:</b> " + msg;
+    el.style.display = "block";
+  }
+  function clearError() {
+    const el = document.getElementById("batchError");
+    el.style.display = "none";
+    el.innerHTML = "";
+  }
+  function showOk(msg) {
+    const el = document.getElementById("batchStatus");
+    el.innerHTML = "<b>" + msg + "</b>";
+    el.style.display = "block";
+  }
+  function clearOk() {
+    const el = document.getElementById("batchStatus");
+    el.style.display = "none";
+    el.innerHTML = "";
+  }
+
+  function resetPreviewUI() {
+    document.getElementById("noPreview").style.display = "block";
+    document.getElementById("previewWrap").style.display = "none";
+    document.getElementById("previewBody").innerHTML = "";
+  }
+
+  function resetDownloadUI() {
+    document.getElementById("noDownload").style.display = "block";
+    document.getElementById("downloadReady").style.display = "none";
+    document.getElementById("downloadLink").href = "#";
+  }
+
+  function badgeHtmlForFraud(v) {
+    if (v === 1) return '<span class="badge text-bg-danger">YES</span>';
+    if (v === 0) return '<span class="badge text-bg-success">NO</span>';
+    return '<span class="badge text-bg-secondary">INVALID</span>';
+  }
+
+  document.getElementById("batchForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    clearError();
+    clearOk();
+    resetPreviewUI();
+    resetDownloadUI();
+
+    const f = fileInput.files[0];
+    if (!f) {
+      showError("Please choose a CSV file.");
+      return;
+    }
+
+    showOk("Uploading and predicting...");
+
+    try {
+      const fd = new FormData();
+      fd.append("file", f);
+
+      const resp = await fetch("/api/predict_batch", {
+        method: "POST",
+        body: fd
+      });
+
+      const data = await resp.json();
+
+      if (!resp.ok) {
+        const msg = data.detail || data.error || ("Request failed: " + resp.status);
+        clearOk();
+        showError(msg);
+        return;
+      }
+
+      // Success message
+      clearOk();
+      showOk("Prediction complete. Preview shows first 10 rows only.");
+
+      // Threshold
+      if (typeof data.threshold !== "undefined") {
+        document.getElementById("uiThreshold").textContent = String(data.threshold);
+      } else {
+        // If your API doesn't return threshold, we keep default 0.25
+        document.getElementById("uiThreshold").textContent = "0.25";
+      }
+
+      // Preview rows
+      const rows = data.preview || [];
+      if (!rows || rows.length === 0) {
+        resetPreviewUI();
+      } else {
+        const tbody = document.getElementById("previewBody");
+        for (let i = 0; i < rows.length; i++) {
+          const r = rows[i];
+
+          const fraudVal = Number(r.fraud);
+          const probPct = (typeof r.prob_percent === "number") ? r.prob_percent : Number(r.prob_percent);
+
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${i + 1}</td>
+            <td class="mono">${r.csv_row ?? "-"}</td>
+            <td class="mono">${r.step ?? ""}</td>
+            <td class="mono">${r.type_code ?? ""}</td>
+            <td class="mono">${r.amount ?? ""}</td>
+            <td class="mono">${r.oldbalanceOrg ?? ""}</td>
+            <td class="mono">${r.newbalanceOrig ?? ""}</td>
+            <td class="mono">${r.oldbalanceDest ?? ""}</td>
+            <td class="mono">${r.newbalanceDest ?? ""}</td>
+            <td>${badgeHtmlForFraud(fraudVal)}</td>
+            <td class="mono">${Number.isFinite(probPct) ? (probPct + "%") : "-"}</td>
+          `;
+          tbody.appendChild(tr);
+        }
+
+        document.getElementById("noPreview").style.display = "none";
+        document.getElementById("previewWrap").style.display = "block";
+      }
+
+      // Download
+      if (data.file_id) {
+        document.getElementById("downloadLink").href = "/download/" + encodeURIComponent(data.file_id);
+        document.getElementById("noDownload").style.display = "none";
+        document.getElementById("downloadReady").style.display = "block";
+      }
+
+    } catch (err) {
+      clearOk();
+      showError(String(err));
+    }
+  });
+</script>
+
+{% endblock %}

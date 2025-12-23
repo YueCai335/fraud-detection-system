@@ -1,0 +1,17 @@
+{% extends "layout.html" %}
+{% set active_page = "about" %}
+
+{% block title %}Fraud Detection - About{% endblock %}
+
+{% block content %}
+  <div class="card shadow-sm">
+    <div class="card-body p-4">
+      <h4 class="section-title mb-1">About</h4>
+      <div class="accent-bar"></div>
+      <p class="text-muted mt-3 mb-0">
+        This project provides a REST API and web UI for PaySim-style fraud detection using a RandomForest model,
+        with SHAP-based top-3 explanations.
+      </p>
+    </div>
+  </div>
+{% endblock %}

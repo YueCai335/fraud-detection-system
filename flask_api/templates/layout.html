@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Fraud Detection{% endblock %}</title>
+
+  <!-- Bootstrap -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  >
+
+  <!-- Global Theme (from old version) -->
+  <link rel="stylesheet" href="/static/css/theme.css">
+
+  <style>
+    /* ===== Layout shell ===== */
+    .app-shell {
+      min-height: 100vh;
+    }
+
+    .content-wrap {
+      padding-top: 16px;
+      padding-bottom: 16px;
+    }
+
+    .section-title {
+      color: #2C3930;
+      font-weight: 800;
+    }
+
+    /* ===== Sidebar ===== */
+    .sidebar {
+      background: #2C3930;
+      color: #DCD7C9;
+      border-radius: 16px;
+      padding: 18px;
+      height: calc(100vh - 32px);
+    }
+
+    .brand {
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    .brand-accent {
+      color: #A27B5C;
+      font-weight: 900;
+    }
+
+    .user {
+      font-size: 13px;
+      opacity: 0.95;
+      margin-bottom: 18px;
+    }
+
+    .nav-title {
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: #DCD7C9;
+      margin-top: 18px;
+      margin-bottom: 12px;
+    }
+
+    .nav-link-custom {
+      display: block;
+      padding: 14px 14px;
+      border-radius: 10px;
+      color: #DCD7C9;
+      text-decoration: none;
+      margin-bottom: 18px;
+      background: rgba(220, 215, 201, 0.06);
+      border: 1px solid rgba(162, 123, 92, 0.22);
+      font-size: 14px;
+    }
+
+    .nav-link-custom:hover {
+      background: rgba(220, 215, 201, 0.12);
+      border-color: rgba(162, 123, 92, 0.55);
+      color: #DCD7C9;
+    }
+
+    .nav-link-custom.active {
+      background: rgba(162, 123, 92, 0.90);
+      color: #2C3930;
+      font-weight: 900;
+      border-color: rgba(162, 123, 92, 1.0);
+    }
+
+    /* ===== Accent / helpers ===== */
+    .accent-bar {
+      height: 4px;
+      width: 60px;
+      background: #A27B5C;
+      border-radius: 999px;
+      margin-top: 8px;
+    }
+
+    /* ===== Result block ===== */
+    pre {
+      background: #0b1020;
+      color: #e6e6e6;
+      padding: 12px;
+      border-radius: 10px;
+      overflow-x: auto;
+      font-size: 13px;
+      line-height: 1.4;
+      margin: 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container app-shell">
+    <div class="row g-3 content-wrap">
+
+      <!-- Sidebar -->
+      <div class="col-12 col-md-4 col-lg-3">
+        <div class="sidebar">
+          <div class="brand">
+            Fraud<span class="brand-accent">Detect</span>
+          </div>
+          <div class="user">PaySim-Based Fraud Detection</div>
+
+          <div class="nav-title">Navigation</div>
+
+          <a
+            class="nav-link-custom {% if active_page == 'home' %}active{% endif %}"
+            href="/home"
+          >
+            Home
+          </a>
+
+          <a
+            class="nav-link-custom {% if active_page == 'single' %}active{% endif %}"
+            href="/single"
+          >
+            Single Prediction
+          </a>
+
+          <a
+            class="nav-link-custom {% if active_page == 'batch' %}active{% endif %}"
+            href="/batch"
+          >
+            Batch Prediction
+          </a>
+
+          <a
+            class="nav-link-custom {% if active_page == 'about' %}active{% endif %}"
+            href="/about"
+          >
+            About
+          </a>
+        </div>
+      </div>
+
+      <!-- Main content -->
+      <div class="col-12 col-md-8 col-lg-9">
+        {% block content %}{% endblock %}
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>
