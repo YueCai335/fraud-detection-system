@@ -1,0 +1,53 @@
+# One command brings up the whole system:
+#   docker compose up --build
+# then open http://localhost:8080 (demo / demo123) or http://localhost:8080/swagger-ui.html
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: fraud
+      MYSQL_USER: fraud
+      MYSQL_PASSWORD: fraud
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-ufraud", "-pfraud"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  model-service:
+    build: ./model-service
+    environment:
+      FRAUD_THRESHOLD: "0.25"
+    ports:
+      - "5001:5000"   # host port 5001: macOS AirPlay Receiver often occupies 5000
+    # healthcheck is declared in model-service/Dockerfile
+
+  fraud-service:
+    build: ./fraud-service
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/fraud?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      DB_USER: fraud
+      DB_PASSWORD: fraud
+      MODEL_SERVICE_URL: http://model-service:5000
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      model-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      start_period: 40s
+      retries: 10
+
+volumes:
+  mysql-data:
