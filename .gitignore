@@ -1,17 +1,28 @@
-# Python virtual environment
-venv/
-.env/
+# ---- Java / Maven ----
+target/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+*.war
+*.log
 
-# Python cache
+# ---- Python ----
+venv/
+.venv/
 __pycache__/
 *.pyc
+.pytest_cache/
+.ipynb_checkpoints/
 
-# Large datasets
+# ---- Data (raw PaySim CSVs are too large for git; samples/ is the exception) ----
 *.csv
+!samples/*.csv
 
-# Java / Maven
-target/
-
-# IDE
-.vscode/
+# ---- IDE / OS ----
 .idea/
+.vscode/
+*.iml
+.DS_Store
+
+# ---- Local env ----
+.env
