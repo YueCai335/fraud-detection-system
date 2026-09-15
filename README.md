@@ -144,9 +144,21 @@ See [model-service/README.md](model-service/README.md) for the endpoint contract
 
 ## Model
 
-RandomForest trained on a stratified 70k-row sample of the
-[PaySim dataset](https://www.kaggle.com/datasets/ealaxi/paysim1) (all 8,213 fraud rows kept).
-Features: the seven raw columns plus two engineered ones, `balanceDiffOrg = oldbalanceOrg − newbalanceOrig`
-and `balanceDiffDest = newbalanceDest − oldbalanceDest`. The decision threshold is 0.25 (configurable
-via `FRAUD_THRESHOLD`), chosen for recall on the imbalanced data. This is a course-project prototype
-model, not a production fraud model.
+RandomForest (100 trees, `class_weight="balanced"`) trained on a 70k-row prototype sample of the
+[PaySim dataset](https://www.kaggle.com/datasets/ealaxi/paysim1): all 8,213 fraud rows plus 61,787
+randomly sampled non-fraud rows, so the prototype set is ~11.7% fraud versus ~0.13% in the full
+dataset. Features: the seven raw columns plus two engineered ones,
+`balanceDiffOrg = oldbalanceOrg − newbalanceOrig` and `balanceDiffDest = newbalanceDest − oldbalanceDest`.
+
+Reported metrics come from a stratified random 80/20 split of that prototype set (14,000 test rows,
+1,643 fraud), scored with scikit-learn's default `predict()` (0.5 threshold): precision 0.980,
+recall 0.992 on the fraud class (confusion matrix `[[12324, 33], [14, 1629]]`). These numbers do not
+describe performance at the real transaction mix — with ~90× fewer fraud cases per honest transaction,
+the same model would produce far more false positives per true fraud. The exported model was then
+retrained on the full prototype set, so its exact test-set numbers are not measured separately.
+
+The serving threshold defaults to 0.25 (`FRAUD_THRESHOLD`). This is a demo configuration, not a
+validated choice: no threshold sweep or separate validation set was used to select it. The
+prototype has not been evaluated with a time-based split (PaySim `step`), which is what a
+post-transaction monitoring scenario would require. This is a course-project prototype, not a
+production fraud model.
