@@ -14,9 +14,9 @@ __pycache__/
 .pytest_cache/
 .ipynb_checkpoints/
 
-# ---- Data (raw PaySim CSVs are too large for git; samples/ is the exception) ----
+# ---- Data (raw PaySim CSVs are too large for git; the bundled sample is the exception) ----
 *.csv
-!samples/*.csv
+!fraud-service/src/main/resources/static/samples/*.csv
 
 # ---- IDE / OS ----
 .idea/

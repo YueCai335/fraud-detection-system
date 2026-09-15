@@ -1,0 +1,52 @@
+spring:
+  application:
+    name: fraud-service
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/fraud?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    username: ${DB_USER:fraud}
+    password: ${DB_PASSWORD:fraud}
+  jpa:
+    hibernate:
+      ddl-auto: validate      # schema is owned by Flyway; Hibernate only checks it matches
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  mvc:
+    view:
+      prefix: /WEB-INF/views/
+      suffix: .jsp
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
+
+model-service:
+  base-url: ${MODEL_SERVICE_URL:http://localhost:5000}
+  connect-timeout: 2s
+  read-timeout: 30s
+  batch-chunk-size: 500
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-components: always
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    jsp:
+      init-parameters:
+        development: "false"
+        mappedfile: "false"   # compact generated code; the legacy pages otherwise exceed the 64KB method limit
+  error:
+    include-message: always
