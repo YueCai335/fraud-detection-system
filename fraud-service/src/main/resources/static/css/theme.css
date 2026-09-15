@@ -1,0 +1,47 @@
+/* ===== Theme Palette =====
+   #2C3930  dark green
+   #3F4F44  mid green
+   #A27B5C  accent
+   #DCD7C9  background
+*/
+
+body {
+  background-color: #DCD7C9;
+  color: #2C3930;
+}
+
+.card {
+  background-color: #ffffff;
+  border-radius: 16px;
+  border: none;
+}
+
+/* Buttons (use Bootstrap btn-dark, we override its color) */
+.btn-dark {
+  background-color: #2C3930;
+  border-color: #2C3930;
+  border-radius: 10px;
+}
+
+.btn-dark:hover,
+.btn-dark:focus {
+  background-color: #3F4F44;
+  border-color: #3F4F44;
+}
+
+/* Input focus */
+.form-control:focus {
+  border-color: #A27B5C;
+  box-shadow: 0 0 0 0.2rem rgba(162, 123, 92, 0.25);
+}
+
+/* Links */
+a {
+  color: #3F4F44;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #2C3930;
+  text-decoration: underline;
+}
