@@ -37,7 +37,9 @@ flowchart LR
 | [`model-service/`](model-service/) | Python 3.10, Flask, scikit-learn 1.7, SHAP, gunicorn, pytest | Loads the pickled RandomForest and scores feature vectors |
 | [`notebooks/`](notebooks/) | Jupyter | Data preparation, model comparison (DT / RF / KNN) and training |
 | `docker-compose.yml` | MySQL 8.4 + the two services | One-command local environment |
+| [`infra/`](infra/) | Terraform | On-demand AWS environment: VPC, ECR, ECS Fargate, RDS, IAM (OIDC deploy role) |
 | `.github/workflows/ci.yml` | GitHub Actions | pytest, Maven verify, then a compose-based end-to-end smoke test |
+| `.github/workflows/deploy.yml` | GitHub Actions | Manual: build linux/amd64 images, push to ECR by commit SHA, roll the ECS service |
 
 ## Quick start
 
@@ -56,6 +58,18 @@ Once all three containers report healthy:
 | OpenAPI JSON | http://localhost:8080/v3/api-docs |
 | Health (incl. DB and model-service) | http://localhost:8080/actuator/health |
 | Model service | http://localhost:5001/health (host port 5001; macOS AirPlay often holds 5000) |
+
+## Deployment (AWS, on demand)
+
+The same containers run on **AWS ECS Fargate + RDS MySQL**, provisioned with Terraform
+([`infra/`](infra/)) and deployed by a GitHub Actions workflow through an OIDC role (no stored
+keys). The environment is created for verification and demo sessions and destroyed afterwards —
+there is no always-on URL; run it locally with `docker compose up` or see
+[docs/deployment.md](docs/deployment.md) for what was verified on AWS and when.
+
+| Single prediction on AWS | Batch prediction on AWS |
+|---|---|
+| ![single](docs/images/aws-single-prediction.png) | ![batch](docs/images/aws-batch-prediction.png) |
 
 ## REST API
 
@@ -130,8 +144,10 @@ See [model-service/README.md](model-service/README.md) for the endpoint contract
 ```
 .
 ├── docker-compose.yml
-├── .github/workflows/ci.yml
-├── docs/                      migration write-up, original course proposal
+├── .github/workflows/         ci.yml (tests) · deploy.yml (manual AWS deploy)
+├── infra/                     Terraform: bootstrap (state bucket) · env (VPC, ECR, ECS, RDS, IAM)
+├── scripts/smoke.sh           end-to-end check used by CI, local verification and AWS deploys
+├── docs/                      migration write-up, deployment log, course proposal
 ├── fraud-service/             Spring Boot (REST + JSP UI + JPA + Security)
 │   ├── src/main/java/com/yuecai/fraud/
 │   │   ├── api/               REST controllers, problem-detail handler
