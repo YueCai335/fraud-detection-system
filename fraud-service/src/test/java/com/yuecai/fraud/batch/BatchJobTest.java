@@ -15,7 +15,7 @@ class BatchJobTest {
     private final Instant t0 = Instant.parse("2026-09-16T10:00:00Z");
 
     private BatchJob pending() {
-        return new BatchJob(user, "key", "tx.csv", "jobs/x/input.csv");
+        return new BatchJob(user, "key", "tx.csv");
     }
 
     @Test

@@ -156,7 +156,7 @@ public class BatchJobWorker {
             List<PredictionResult> results = tx.execute(s -> predictions
                     .findByBatchIdAndUserUsernameOrderByCsvRowAsc(jobId, jobs.findById(jobId).orElseThrow().getUser().getUsername())
                     .stream().map(PredictionResult::from).toList());
-            String resultKey = BatchJobService.resultKey(jobId);
+            String resultKey = BatchJob.resultKey(jobId);
             store.put(resultKey, PredictionCsv.write(results).getBytes(StandardCharsets.UTF_8), "text/csv");
             tx.executeWithoutResult(s -> jobs.findById(jobId).orElseThrow().markSucceeded(resultKey, Instant.now()));
             log.info("Batch job {} succeeded: {} rows, {} flagged", jobId, results.size(), fraudCount);

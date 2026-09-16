@@ -63,10 +63,8 @@ public class BatchJobService {
             return new Submission(existing.get(), false);
         }
 
-        BatchJob job = new BatchJob(user, key, originalFilename, "pending");
-        String inputKey = inputKey(job.getId());
-        job = new BatchJob(user, key, originalFilename, inputKey);
-        store.put(inputKey, csv, "text/csv");
+        BatchJob job = new BatchJob(user, key, originalFilename);
+        store.put(job.getInputKey(), csv, "text/csv");
         try {
             return new Submission(jobs.saveAndFlush(job), true);
         } catch (DataIntegrityViolationException raced) {
@@ -122,14 +120,6 @@ public class BatchJobService {
             throw new IllegalStateException("Job " + id + " has no result yet (status " + job.getStatus() + ")");
         }
         return job;
-    }
-
-    static String inputKey(String jobId) {
-        return "jobs/" + jobId + "/input.csv";
-    }
-
-    static String resultKey(String jobId) {
-        return "jobs/" + jobId + "/result.csv";
     }
 
     static String sha256(byte[] content) {

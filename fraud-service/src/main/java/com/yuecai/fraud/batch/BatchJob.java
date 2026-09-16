@@ -96,12 +96,20 @@ public class BatchJob {
         // JPA
     }
 
-    public BatchJob(User user, String idempotencyKey, String originalFilename, String inputKey) {
+    public BatchJob(User user, String idempotencyKey, String originalFilename) {
         this.id = UUID.randomUUID().toString();
         this.user = user;
         this.idempotencyKey = idempotencyKey;
         this.originalFilename = originalFilename;
-        this.inputKey = inputKey;
+        this.inputKey = inputKey(id);
+    }
+
+    public static String inputKey(String jobId) {
+        return "jobs/" + jobId + "/input.csv";
+    }
+
+    public static String resultKey(String jobId) {
+        return "jobs/" + jobId + "/result.csv";
     }
 
     // ---- state transitions (the only way status changes) ------------------------------------
