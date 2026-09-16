@@ -17,5 +17,8 @@ RUN useradd --system --uid 1001 app
 USER app
 COPY --from=build /workspace/target/fraud-service.war app.war
 
+# Size the heap from the container's memory limit (default is only 25%).
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75.0"
+
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.war"]

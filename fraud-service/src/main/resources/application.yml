@@ -1,6 +1,8 @@
 spring:
   application:
     name: fraud-service
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
   datasource:
     url: ${DB_URL:jdbc:mysql://localhost:3306/fraud?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
     username: ${DB_USER:fraud}
@@ -43,6 +45,11 @@ springdoc:
 
 server:
   port: ${SERVER_PORT:8080}
+  # Behind a TLS-terminating load balancer (ALB) the container sees plain HTTP; honour
+  # X-Forwarded-Proto/Host so redirects and secure cookies use the client-facing https URL.
+  forward-headers-strategy: native
+  # Let in-flight requests (e.g. a batch upload) finish when ECS sends SIGTERM during a deploy.
+  shutdown: graceful
   servlet:
     jsp:
       init-parameters:
