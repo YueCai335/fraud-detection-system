@@ -99,6 +99,8 @@ class BatchJobFlowTest {
                 .thenReturn(List.of(LEGIT_SCORE));               // chunk 2: row 5
         String id = submitAs("alice");
 
+        assertThat(jobs.findById(id).orElseThrow().getInputKey()).isEqualTo("jobs/" + id + "/input.csv");
+
         assertThat(worker.pollOnce()).isTrue();
         assertThat(worker.pollOnce()).isFalse(); // queue empty
 
