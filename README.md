@@ -67,9 +67,9 @@ keys). The environment is created for verification and demo sessions and destroy
 there is no always-on URL; run it locally with `docker compose up` or see
 [docs/deployment.md](docs/deployment.md) for what was verified on AWS and when.
 
-| Single prediction on AWS | Batch prediction on AWS |
+| Single prediction on AWS | Async batch job on AWS (S3-backed) |
 |---|---|
-| ![single](docs/images/aws-single-prediction.png) | ![batch](docs/images/aws-batch-prediction.png) |
+| ![single](docs/images/aws-single-prediction.png) | ![job](docs/images/aws-batch-job.png) |
 
 ## REST API
 
