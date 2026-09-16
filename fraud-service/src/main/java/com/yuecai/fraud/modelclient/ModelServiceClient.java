@@ -10,6 +10,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 
 /**
  * HTTP client for the Python model service.
@@ -18,9 +20,15 @@ import org.springframework.web.client.RestClientResponseException;
  * single {@link RestClient} that has explicit connect/read timeouts. Every
  * failure mode (connection refused, timeout, non-2xx, malformed body) is mapped
  * to {@link ModelServiceException} so callers only have to handle one thing.
+ *
+ * <p>Transient failures ({@link ModelServiceUnavailableException}) are retried with
+ * back-off and counted by a circuit breaker (Resilience4j instance {@code model}, see
+ * application.yml). 4xx responses are not retried.
  */
 @Component
 public class ModelServiceClient {
+
+    public static final String RESILIENCE_NAME = "model";
 
     private static final Logger log = LoggerFactory.getLogger(ModelServiceClient.class);
 
@@ -32,6 +40,8 @@ public class ModelServiceClient {
         this.batchChunkSize = props.batchChunkSize();
     }
 
+    @Retry(name = RESILIENCE_NAME)
+    @CircuitBreaker(name = RESILIENCE_NAME)
     public ModelScore predict(ModelFeatures features) {
         ModelScore score = exchange("/predict", features, ModelScore.class);
         if (score == null) {
@@ -41,6 +51,8 @@ public class ModelServiceClient {
     }
 
     /** Scores many transactions, chunking the request so a large CSV cannot produce one huge HTTP call. */
+    @Retry(name = RESILIENCE_NAME)
+    @CircuitBreaker(name = RESILIENCE_NAME)
     public List<ModelScore> predictBatch(List<ModelFeatures> features) {
         List<ModelScore> all = new ArrayList<>(features.size());
         for (int from = 0; from < features.size(); from += batchChunkSize) {
@@ -78,11 +90,14 @@ public class ModelServiceClient {
                     .body(type);
         } catch (RestClientResponseException e) {
             log.warn("Model service {} returned {}: {}", path, e.getStatusCode(), e.getResponseBodyAsString());
-            throw new ModelServiceException(
-                    "Model service rejected the request (" + e.getStatusCode().value() + ")", e);
+            String msg = "Model service rejected the request (" + e.getStatusCode().value() + ")";
+            if (e.getStatusCode().is5xxServerError()) {
+                throw new ModelServiceUnavailableException(msg, e);
+            }
+            throw new ModelServiceException(msg, e);
         } catch (ResourceAccessException e) {
             log.warn("Model service {} unreachable: {}", path, e.getMessage());
-            throw new ModelServiceException("Model service is unavailable or timed out", e);
+            throw new ModelServiceUnavailableException("Model service is unavailable or timed out", e);
         }
     }
 }

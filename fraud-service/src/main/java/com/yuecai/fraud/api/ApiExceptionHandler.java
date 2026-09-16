@@ -1,6 +1,9 @@
 package com.yuecai.fraud.api;
 
+import com.yuecai.fraud.batch.BatchJobNotFoundException;
 import com.yuecai.fraud.modelclient.ModelServiceException;
+import com.yuecai.fraud.storage.ObjectNotFoundException;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import com.yuecai.fraud.prediction.BatchNotFoundException;
 import com.yuecai.fraud.prediction.EmptyBatchException;
 import java.util.LinkedHashMap;
@@ -40,9 +43,22 @@ public class ApiExceptionHandler {
         return pd;
     }
 
-    @ExceptionHandler(BatchNotFoundException.class)
-    ProblemDetail notFound(BatchNotFoundException e) {
+    @ExceptionHandler({BatchNotFoundException.class, BatchJobNotFoundException.class, ObjectNotFoundException.class})
+    ProblemDetail notFound(RuntimeException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
+    }
+
+    /** e.g. retrying a job that is not FAILED, or downloading a result that does not exist yet. */
+    @ExceptionHandler(IllegalStateException.class)
+    ProblemDetail conflict(IllegalStateException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
+    }
+
+    /** Circuit breaker open: the model service has been failing; fail fast instead of piling on. */
+    @ExceptionHandler(CallNotPermittedException.class)
+    ProblemDetail circuitOpen(CallNotPermittedException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE,
+                "Model service is temporarily unavailable (circuit open); try again shortly");
     }
 
     @ExceptionHandler(ModelServiceException.class)

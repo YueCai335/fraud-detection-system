@@ -74,32 +74,9 @@ public class BatchPredictionService {
         return rows.stream().map(PredictionResult::from).toList();
     }
 
-    /** Renders a batch as CSV for download; reason columns are quoted because they contain commas/parentheses. */
+    /** Renders a batch as CSV for download. */
     @Transactional(readOnly = true)
     public String batchCsv(String username, String batchId) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("csv_row,step,type_code,type,amount,oldbalanceOrg,newbalanceOrig,oldbalanceDest,newbalanceDest,")
-          .append("fraud,prob_fraud,reason1,reason2,reason3\n");
-        for (PredictionResult r : batchRows(username, batchId)) {
-            sb.append(r.csvRow()).append(',')
-              .append(r.step()).append(',')
-              .append(r.typeCode()).append(',')
-              .append(r.type()).append(',')
-              .append(r.amount()).append(',')
-              .append(r.oldbalanceOrg()).append(',')
-              .append(r.newbalanceOrig()).append(',')
-              .append(r.oldbalanceDest()).append(',')
-              .append(r.newbalanceDest()).append(',')
-              .append(r.fraud() ? 1 : 0).append(',')
-              .append(r.probFraud() == null ? "" : r.probFraud()).append(',')
-              .append(quote(r.reasons().get(0))).append(',')
-              .append(quote(r.reasons().get(1))).append(',')
-              .append(quote(r.reasons().get(2))).append('\n');
-        }
-        return sb.toString();
-    }
-
-    private static String quote(String s) {
-        return '"' + s.replace("\"", "\"\"") + '"';
+        return PredictionCsv.write(batchRows(username, batchId));
     }
 }

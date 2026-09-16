@@ -14,3 +14,10 @@ model-service:
   connect-timeout: 1s
   read-timeout: 1s
   batch-chunk-size: 2
+
+# Batch jobs: no timers in tests (the worker is invoked explicitly); tiny chunks to exercise resume.
+scheduling:
+  enabled: false
+batch:
+  worker:
+    chunk-size: 2
