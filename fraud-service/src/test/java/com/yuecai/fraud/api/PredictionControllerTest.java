@@ -150,6 +150,23 @@ class PredictionControllerTest {
     }
 
     @Test
+    void batchRejectsRowsTheSingleEndpointWouldReject() throws Exception {
+        // Regression (review of 0c10e15): amount=-5 was 400 on POST /predictions but accepted via CSV.
+        when(modelClient.predictBatch(anyList())).thenReturn(List.of(FRAUD_SCORE));
+        MockMultipartFile file = new MockMultipartFile("file", "tx.csv", "text/csv", """
+                100,1,-5,10000.0,0.0,0.0,10000.0
+                100,1,10000.0,10000.0,0.0,0.0,10000.0
+                """.getBytes(StandardCharsets.UTF_8));
+
+        mvc.perform(multipart("/api/v1/predictions/batch").file(file).with(httpBasic("alice", "secret")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(1))
+                .andExpect(jsonPath("$.skipped[0]").value("line 1: amount must be greater than or equal to 0"));
+
+        assertThat(predictions.count()).isEqualTo(1);
+    }
+
+    @Test
     void batchWithNoValidRowsIs400() throws Exception {
         MockMultipartFile file = new MockMultipartFile("file", "tx.csv", "text/csv", "a,b,c\n".getBytes());
 
