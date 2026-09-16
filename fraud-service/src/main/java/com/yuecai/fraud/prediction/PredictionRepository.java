@@ -12,4 +12,6 @@ public interface PredictionRepository extends JpaRepository<Prediction, Long> {
     List<Prediction> findByBatchIdAndUserUsernameOrderByCsvRowAsc(String batchId, String username);
 
     long countByBatchIdAndFraudTrue(String batchId);
+
+    boolean existsByUserUsername(String username);
 }

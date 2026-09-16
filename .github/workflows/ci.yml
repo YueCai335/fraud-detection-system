@@ -51,23 +51,8 @@ jobs:
       - uses: actions/checkout@v5
       - name: Start the stack
         run: docker compose up --build -d --wait --wait-timeout 300
-      - name: Health
-        run: |
-          curl -fsS http://localhost:8080/actuator/health | tee health.json
-          grep -q '"modelService":{"status":"UP"' health.json
-      - name: Score a transaction through the REST API
-        run: |
-          curl -fsS -u demo:demo123 -H 'Content-Type: application/json' \
-            http://localhost:8080/api/v1/predictions \
-            -d '{"step":100,"typeCode":1,"amount":10000,"oldbalanceOrg":10000,"newbalanceOrig":0,"oldbalanceDest":0,"newbalanceDest":10000}' \
-            | tee single.json
-          grep -q '"fraud":true' single.json
-      - name: Batch CSV through the REST API
-        run: |
-          curl -fsS -u demo:demo123 \
-            -F file=@fraud-service/src/main/resources/static/samples/sample_transactions.csv \
-            http://localhost:8080/api/v1/predictions/batch | tee batch.json
-          grep -q '"total":8' batch.json
+      - name: Smoke test (Java -> Python -> MySQL)
+        run: scripts/smoke.sh http://localhost:8080 demo demo123
       - name: Logs on failure
         if: failure()
         run: docker compose logs

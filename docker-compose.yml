@@ -35,6 +35,7 @@ services:
       DB_USER: fraud
       DB_PASSWORD: fraud
       MODEL_SERVICE_URL: http://model-service:5000
+      SPRING_PROFILES_ACTIVE: demo   # seeds demo/demo123 + sample history; omit in real environments
     ports:
       - "8080:8080"
     depends_on:

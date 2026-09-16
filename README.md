@@ -51,7 +51,7 @@ Once all three containers report healthy:
 
 | What | URL |
 |---|---|
-| Web UI | http://localhost:8080 — demo account **demo / demo123**, or register your own |
+| Web UI | http://localhost:8080 — demo account **demo / demo123** (seeded by the `demo` Spring profile, which compose enables), or register your own |
 | Swagger UI | http://localhost:8080/swagger-ui.html (click *Authorize*, HTTP Basic) |
 | OpenAPI JSON | http://localhost:8080/v3/api-docs |
 | Health (incl. DB and model-service) | http://localhost:8080/actuator/health |
@@ -104,6 +104,11 @@ cd fraud-service
 ./mvnw verify                      # unit + MockMvc tests on in-memory H2 (no Docker needed)
 ./mvnw spring-boot:run             # needs MySQL on :3306 and model-service on :5000 (see application.yml)
 ```
+
+`SPRING_PROFILES_ACTIVE=demo` seeds the `demo` user and a few sample predictions (idempotent, see
+`DemoDataSeeder`); without it a fresh database has no accounts — register one. After any change to the
+stack, `scripts/smoke.sh http://localhost:8080 demo demo123` proves the Java → Python → MySQL chain
+end to end; CI runs the same script against docker compose.
 
 Configuration is via environment variables: `DB_URL`, `DB_USER`, `DB_PASSWORD`, `MODEL_SERVICE_URL`, `SERVER_PORT`.
 Schema changes go in `src/main/resources/db/migration/V<n>__<name>.sql`; Hibernate runs in `validate` mode.
