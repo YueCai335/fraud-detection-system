@@ -1,0 +1,93 @@
+name: Deploy to AWS
+
+# Manual: the AWS environment is created on demand (infra/env), so this never runs on push.
+on:
+  workflow_dispatch:
+    inputs:
+      smoke_url:
+        description: "Base URL to smoke-test after deploy (demo tier, e.g. https://fraud.example.com). Empty = skip."
+        required: false
+        default: ""
+
+permissions:
+  id-token: write   # OIDC token for AWS
+  contents: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  ECS_CLUSTER: fraud-cluster
+  ECS_SERVICE: fraud-app
+  TASK_FAMILY: fraud-app
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Assume the deploy role (OIDC, no stored keys)
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Image tags
+        id: tags
+        run: |
+          SHA=sha-$(git rev-parse --short HEAD)
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "fraud=${{ steps.ecr.outputs.registry }}/fraud-service" >> "$GITHUB_OUTPUT"
+          echo "model=${{ steps.ecr.outputs.registry }}/model-service" >> "$GITHUB_OUTPUT"
+
+      # Runner is x86_64, matching the Fargate task's X86_64 runtime platform.
+      - name: Build and push fraud-service
+        run: |
+          docker build --platform linux/amd64 -t "${{ steps.tags.outputs.fraud }}:${{ steps.tags.outputs.sha }}" -t "${{ steps.tags.outputs.fraud }}:latest" fraud-service
+          docker push --all-tags "${{ steps.tags.outputs.fraud }}"
+
+      - name: Build and push model-service
+        run: |
+          docker build --platform linux/amd64 -t "${{ steps.tags.outputs.model }}:${{ steps.tags.outputs.sha }}" -t "${{ steps.tags.outputs.model }}:latest" model-service
+          docker push --all-tags "${{ steps.tags.outputs.model }}"
+
+      - name: Fetch current task definition
+        run: |
+          aws ecs describe-task-definition --task-definition "$TASK_FAMILY" \
+            --query taskDefinition --output json > task-definition.json
+
+      - name: Point model-service at the new image
+        id: render-model
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: model-service
+          image: ${{ steps.tags.outputs.model }}:${{ steps.tags.outputs.sha }}
+
+      - name: Point fraud-service at the new image
+        id: render-app
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ${{ steps.render-model.outputs.task-definition }}
+          container-name: fraud-service
+          image: ${{ steps.tags.outputs.fraud }}:${{ steps.tags.outputs.sha }}
+
+      - name: Register revision and roll the service
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render-app.outputs.task-definition }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          service: ${{ env.ECS_SERVICE }}
+          wait-for-service-stability: true
+          wait-for-minutes: 15
+
+      - name: Smoke test (demo tier only)
+        if: inputs.smoke_url != ''
+        run: scripts/smoke.sh "${{ inputs.smoke_url }}" demo demo123
+
+      - name: Summary
+        run: |
+          echo "Deployed ${{ steps.tags.outputs.sha }} (commit $(git rev-parse HEAD)) to $ECS_CLUSTER/$ECS_SERVICE" >> "$GITHUB_STEP_SUMMARY"
