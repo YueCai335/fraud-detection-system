@@ -29,3 +29,12 @@ __pycache__/
 
 # ---- Personal notes (interview prep, learning log) ----
 notes/
+
+# ---- Terraform ----
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+tfplan
