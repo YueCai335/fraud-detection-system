@@ -29,6 +29,51 @@ model-service:
   read-timeout: 30s
   batch-chunk-size: 500
 
+# Retry + circuit breaker around every model call (instance name "model").
+resilience4j:
+  retry:
+    instances:
+      model:
+        max-attempts: 3
+        wait-duration: 500ms
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        retry-exceptions:
+          - com.yuecai.fraud.modelclient.ModelServiceUnavailableException
+  circuitbreaker:
+    instances:
+      model:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 2
+        record-exceptions:
+          - com.yuecai.fraud.modelclient.ModelServiceUnavailableException
+        ignore-exceptions:
+          - com.yuecai.fraud.modelclient.ModelServiceException
+
+# Batch jobs: files in the object store, processing by the in-process worker.
+storage:
+  type: ${STORAGE_TYPE:memory}          # memory | s3
+  bucket: ${STORAGE_BUCKET:}
+  region: ${AWS_REGION:${AWS_DEFAULT_REGION:us-east-1}}
+  endpoint: ${STORAGE_ENDPOINT:}         # MinIO only
+  public-endpoint: ${STORAGE_PUBLIC_ENDPOINT:}
+  access-key: ${STORAGE_ACCESS_KEY:}
+  secret-key: ${STORAGE_SECRET_KEY:}
+  create-bucket: ${STORAGE_CREATE_BUCKET:false}
+
+batch:
+  worker:
+    enabled: ${BATCH_WORKER_ENABLED:true}
+    poll-interval: 5s
+    stale-after: 5m          # RUNNING with no heartbeat for this long -> reclaimed
+    chunk-size: 500
+    max-rows: 100000
+  result-url-ttl: 15m
+
 management:
   endpoints:
     web:

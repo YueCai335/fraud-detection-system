@@ -212,167 +212,71 @@
                                 </div>
                             </form>
 
-<%
-    String err = (String) request.getAttribute("error");
-    String okMsg = (String) request.getAttribute("okMsg");
-    if (err != null) {
-%>
-                            <!-- CHANGED: warning -> danger -->
+                            <c:if test="${not empty error}">
                             <div class="alert alert-danger mt-3 mb-0" role="alert">
                                 <b>Error:</b> <c:out value="${error}"/>
-                                <div class="mt-2">
-                                    Please download and compare with the sample file above.
-                                </div>
-                            </div>
-<%
-    } else if (okMsg != null) {
-%>
-                            <div class="alert alert-success mt-3 mb-0">
-                                <b><c:out value="${okMsg}"/></b>
-                            </div>
-<%
-    }
-%>
-                            <c:if test="${not empty skipped}">
-                            <div class="alert alert-warning mt-3 mb-0">
-                                <b>Skipped ${skipped.size()} line(s):</b>
-                                <ul class="mb-0 mt-1">
-                                    <c:forEach var="line" items="${skipped}"><li><c:out value="${line}"/></li></c:forEach>
-                                </ul>
                             </div>
                             </c:if>
+
+                            <div class="hint-box mt-3">
+                                Files are scored in the background. After upload you are taken to the job page,
+                                which shows progress and offers the result CSV when done.
+                            </div>
 
                         </div>
                     </div>
                 </div>
 
-                <!-- Card 2: Preview -->
-                <div class="col-12">
+                <!-- Card 2: My jobs -->
+                <div class="col-12 mb-4">
                     <div class="card shadow-sm">
                         <div class="card-body p-4">
-                            <h5 class="section-title mb-2">Preview (Top 10)</h5>
+                            <h5 class="section-title mb-2">My Batch Jobs</h5>
                             <div class="accent-bar small"></div>
 
-                            <div class="text-muted mt-3">
-                                Fraud is shown as YES/NO. Probability is shown as a percentage.
-                            </div>
-
-<%
-    Object previewObj = request.getAttribute("previewRows");
-    if (previewObj == null) {
-%>
-                            <div class="hint-box mt-3">
-                                No results yet. Upload a CSV file to see predictions here.
-                            </div>
-<%
-    } else {
-        @SuppressWarnings("unchecked")
-        List<PredictionResult> rows = (List<PredictionResult>) previewObj;
-
-        if (rows.isEmpty()) {
-%>
-                            <div class="hint-box mt-3">
-                                No rows were parsed from CSV.
-                            </div>
-<%
-        } else {
-%>
+                            <c:choose>
+                            <c:when test="${empty jobs}">
+                            <div class="hint-box mt-3">No jobs yet. Upload a CSV to start one.</div>
+                            </c:when>
+                            <c:otherwise>
                             <div class="table-responsive mt-3">
                                 <table class="table table-sm align-middle mb-0">
                                     <thead>
                                         <tr>
-                                            <th>#</th>
-                                            <th>CSV Row</th>
-                                            <th>step</th>
-                                            <th>type_code</th>
-                                            <th>amount</th>
-                                            <th>oldbalanceOrg</th>
-                                            <th>newbalanceOrig</th>
-                                            <th>oldbalanceDest</th>
-                                            <th>newbalanceDest</th>
-                                            <th>Fraud?</th>
-                                            <th>Probability</th>
+                                            <th>Submitted</th>
+                                            <th>File</th>
+                                            <th>Status</th>
+                                            <th>Rows</th>
+                                            <th>Fraud</th>
+                                            <th>Attempts</th>
+                                            <th></th>
                                         </tr>
                                     </thead>
                                     <tbody>
-<%
-            int i = 1;
-            for (PredictionResult r : rows) {
-                boolean isFraud = r.fraud();
-                int probPercent = r.probPercent();
-%>
+                                    <c:forEach var="j" items="${jobs}">
                                         <tr>
-                                            <td><%= i %></td>
-                                            <td class="mono"><%= r.csvRow() %></td>
-                                            <td class="mono"><%= r.step() %></td>
-                                            <td class="mono"><%= r.typeCode() %></td>
-                                            <td class="mono"><%= r.amount() %></td>
-                                            <td class="mono"><%= r.oldbalanceOrg() %></td>
-                                            <td class="mono"><%= r.newbalanceOrig() %></td>
-                                            <td class="mono"><%= r.oldbalanceDest() %></td>
-                                            <td class="mono"><%= r.newbalanceDest() %></td>
-
+                                            <td class="mono"><c:out value="${j.createdAt}"/></td>
+                                            <td><c:out value="${j.originalFilename}"/></td>
                                             <td>
-                                                <% if (isFraud) { %>
-                                                    <span class="badge text-bg-danger">YES</span>
-                                                <% } else { %>
-                                                    <span class="badge text-bg-success">NO</span>
-                                                <% } %>
+                                                <span class="badge ${j.status == 'SUCCEEDED' ? 'text-bg-success' : j.status == 'FAILED' ? 'text-bg-danger' : j.status == 'RUNNING' ? 'text-bg-primary' : 'text-bg-secondary'}">
+                                                    <c:out value="${j.status}"/>
+                                                </span>
                                             </td>
-
-                                            <td class="mono"><%= probPercent %>%</td>
+                                            <td class="mono"><c:out value="${j.processedRows}"/><c:if test="${j.totalRows != null}"> / <c:out value="${j.totalRows}"/></c:if></td>
+                                            <td class="mono"><c:out value="${j.fraudCount}"/></td>
+                                            <td class="mono"><c:out value="${j.attempts}"/></td>
+                                            <td><a href="<%=request.getContextPath()%>/batch/jobs/<c:out value='${j.id}'/>">Open</a></td>
                                         </tr>
-<%
-                i++;
-            }
-%>
+                                    </c:forEach>
                                     </tbody>
                                 </table>
                             </div>
-<%
-        }
-    }
-%>
+                            </c:otherwise>
+                            </c:choose>
 
                         </div>
                     </div>
                 </div>
-
-                <!-- Card 3: Download -->
-                <div class="col-12 mb-4">
-                    <div class="card shadow-sm">
-                        <div class="card-body p-4">
-                            <h5 class="section-title mb-2">Download Full Result CSV</h5>
-                            <div class="accent-bar small"></div>
-
-<%
-    String batchId = (String) request.getAttribute("batchId");
-    if (batchId == null) {
-%>
-                            <div class="hint-box mt-3">
-                                Download will be available after you upload and predict.
-                            </div>
-<%
-    } else {
-%>
-                            <div class="hint-box mt-3">
-                                Your full result file is ready.
-                            </div>
-
-                            <div class="mt-3">
-                                <a class="btn btn-dark"
-                                   href="<%=request.getContextPath()%>/batch/<%=batchId%>/download">
-                                    Download full prediction CSV
-                                </a>
-                            </div>
-<%
-    }
-%>
-
-                        </div>
-                    </div>
-                </div>
-
             </div>
         </div>
 

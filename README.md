@@ -33,10 +33,10 @@ flowchart LR
 
 | Component | Tech | Responsibility |
 |---|---|---|
-| [`fraud-service/`](fraud-service/) | Spring Boot 3.5, Spring MVC + JSP, Spring Data JPA/Hibernate, Flyway, Spring Security, springdoc-openapi, JUnit 5/Mockito/MockMvc | Web UI, REST API, users & prediction history, orchestration of the model call |
+| [`fraud-service/`](fraud-service/) | Spring Boot 3.5, Spring MVC + JSP, Spring Data JPA/Hibernate, Flyway, Spring Security, Resilience4j, AWS SDK (S3), springdoc-openapi, JUnit 5/Mockito/MockMvc | Web UI, REST API, users & prediction history, async batch jobs, orchestration of the model call |
 | [`model-service/`](model-service/) | Python 3.10, Flask, scikit-learn 1.7, SHAP, gunicorn, pytest | Loads the pickled RandomForest and scores feature vectors |
 | [`notebooks/`](notebooks/) | Jupyter | Data preparation, model comparison (DT / RF / KNN) and training |
-| `docker-compose.yml` | MySQL 8.4 + the two services | One-command local environment |
+| `docker-compose.yml` | MySQL 8.4 + MinIO + the two services | One-command local environment |
 | [`infra/`](infra/) | Terraform | On-demand AWS environment: VPC, ECR, ECS Fargate, RDS, IAM (OIDC deploy role) |
 | `.github/workflows/ci.yml` | GitHub Actions | pytest, Maven verify, then a compose-based end-to-end smoke test |
 | `.github/workflows/deploy.yml` | GitHub Actions | Manual: build linux/amd64 images, push to ECR by commit SHA, roll the ECS service |
@@ -104,6 +104,29 @@ curl -u demo:demo123 localhost:8080/api/v1/predictions/batches/<batchId>/csv
 curl -u demo:demo123 'localhost:8080/api/v1/predictions?page=0&size=20'
 ```
 
+### Asynchronous batch jobs
+
+For large files, submit a job instead of waiting on the request:
+
+```bash
+# 202 Accepted + Location. Idempotency-Key makes retries safe (without it, the file's SHA-256 is used).
+curl -u demo:demo123 -H 'Idempotency-Key: run-42' -F file=@transactions.csv localhost:8080/api/v1/batch-jobs
+# poll: status PENDING/RUNNING/SUCCEEDED/FAILED, processedRows/totalRows, fraudCount, attempts, lastError
+curl -u demo:demo123 localhost:8080/api/v1/batch-jobs/<id>
+# result: 302 to a 15-minute S3 pre-signed URL (curl -L follows it)
+curl -L -u demo:demo123 localhost:8080/api/v1/batch-jobs/<id>/result -o result.csv
+# re-queue a FAILED job; it resumes from its last committed chunk
+curl -X POST -u demo:demo123 localhost:8080/api/v1/batch-jobs/<id>/retry
+```
+
+How it works: the CSV goes to object storage (S3; MinIO in docker compose), a `batch_jobs` row is
+created, and an in-process worker claims PENDING rows with `SELECT … FOR UPDATE SKIP LOCKED` — the
+database is the queue, so several instances can run without extra infrastructure. Rows are scored in
+chunks of 500; each chunk is committed together with the job's `processed_rows` checkpoint, so a crash
+or a model outage loses at most one chunk and a retry resumes from there. Model calls are retried
+with back-off behind a circuit breaker (Resilience4j); a job gives up after 3 attempts and can be
+retried manually. Jobs whose worker stops heart-beating are reclaimed automatically.
+
 Errors are RFC 9457 problem details: `400` with a per-field `errors` map for validation,
 `503` when the model service is down or times out, `404` for someone else's batch.
 
@@ -153,6 +176,8 @@ See [model-service/README.md](model-service/README.md) for the endpoint contract
 │   │   ├── api/               REST controllers, problem-detail handler
 │   │   ├── web/               MVC controllers for the JSP pages
 │   │   ├── prediction/        domain: entity, repository, services, CSV parsing
+│   │   ├── batch/             async jobs: entity/state machine, DB-queue worker, service
+│   │   ├── storage/           ObjectStore: S3 (and MinIO) or in-memory
 │   │   ├── user/              entity, repository, registration, UserDetailsService
 │   │   ├── modelclient/       RestClient wrapper for model-service + health indicator
 │   │   └── config/            Security, OpenAPI, RestClient beans

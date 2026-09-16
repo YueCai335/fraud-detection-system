@@ -20,6 +20,24 @@ services:
       timeout: 5s
       retries: 20
 
+  # S3-compatible object store for batch job files (S3 itself in AWS).
+  minio:
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio12345
+    ports:
+      - "9000:9000"   # S3 API (also the presigned-URL host the browser uses)
+      - "9001:9001"   # web console (minio / minio12345)
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
   model-service:
     build: ./model-service
     environment:
@@ -36,12 +54,21 @@ services:
       DB_PASSWORD: fraud
       MODEL_SERVICE_URL: http://model-service:5000
       SPRING_PROFILES_ACTIVE: demo   # seeds demo/demo123 + sample history; omit in real environments
+      STORAGE_TYPE: s3
+      STORAGE_BUCKET: fraud-batch
+      STORAGE_ENDPOINT: http://minio:9000
+      STORAGE_PUBLIC_ENDPOINT: http://localhost:9000   # presigned URLs must be reachable from the browser
+      STORAGE_ACCESS_KEY: minio
+      STORAGE_SECRET_KEY: minio12345
+      STORAGE_CREATE_BUCKET: "true"
     ports:
       - "8080:8080"
     depends_on:
       mysql:
         condition: service_healthy
       model-service:
+        condition: service_healthy
+      minio:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -fs http://localhost:8080/actuator/health || exit 1"]
@@ -52,3 +79,4 @@ services:
 
 volumes:
   mysql-data:
+  minio-data:

@@ -9,6 +9,7 @@
 #   2. a single prediction is scored and stored (returns an id)
 #   3. that id is visible in the caller's history
 #   4. the bundled sample CSV is scored as a batch (8 rows, 4 flagged)
+#   5. the same CSV is submitted as an async job, polled to SUCCEEDED, and its result downloaded
 # Used by CI (docker compose), by local verification of an AWS deployment, and by the
 # demo-tier deploy workflow. Exit code 0 = all checks passed.
 set -euo pipefail
@@ -60,5 +61,26 @@ total="$(json "d['total']" "$TMP/batch.json")"
 flagged="$(json "d['fraudCount']" "$TMP/batch.json")"
 [ "$total" = "8" ] && [ "$flagged" = "4" ] || fail "expected 8 rows / 4 flagged, got $total / $flagged" "$TMP/batch.json"
 pass "batch: 8 rows scored, 4 flagged"
+
+# 5. async batch job: submit -> poll -> download (exercises the worker and the object store)
+code="$(curl -sS -o "$TMP/job.json" -w '%{http_code}' -u "$USER:$PASS" \
+  -H "Idempotency-Key: smoke-$(date +%s%N)" -F "file=@$TMP/sample.csv" "$BASE/api/v1/batch-jobs")"
+[ "$code" = "202" ] || fail "job submit returned HTTP $code" "$TMP/job.json"
+job="$(json "d['id']" "$TMP/job.json")"
+status=PENDING
+for i in $(seq 1 40); do
+  curl -fsS -u "$USER:$PASS" "$BASE/api/v1/batch-jobs/$job" -o "$TMP/job.json" || fail "job status unreachable" "$TMP/job.json"
+  status="$(json "d['status']" "$TMP/job.json")"
+  case "$status" in SUCCEEDED|FAILED) break;; esac
+  sleep 3
+done
+[ "$status" = "SUCCEEDED" ] || fail "job $job ended as $status" "$TMP/job.json"
+processed="$(json "d['processedRows']" "$TMP/job.json")"
+[ "$processed" = "8" ] || fail "job processed $processed rows, expected 8" "$TMP/job.json"
+# -L follows the 302 to a presigned URL when the store is S3/MinIO
+curl -fsSL -u "$USER:$PASS" "$BASE/api/v1/batch-jobs/$job/result" -o "$TMP/result.csv" || fail "result download failed" "$TMP/result.csv"
+lines="$(wc -l < "$TMP/result.csv" | tr -d ' ')"
+[ "$lines" = "9" ] || fail "result CSV has $lines lines, expected 9 (header + 8)" "$TMP/result.csv"
+pass "async job $job: SUCCEEDED, 8 rows, result CSV downloaded"
 
 echo "all smoke checks passed"

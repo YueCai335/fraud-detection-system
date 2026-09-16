@@ -47,6 +47,7 @@ class PredictionControllerTest {
     @Autowired MockMvc mvc;
     @Autowired UserRepository users;
     @Autowired PredictionRepository predictions;
+    @Autowired com.yuecai.fraud.batch.BatchJobRepository batchJobs;
     @Autowired PasswordEncoder encoder;
     @MockitoBean ModelServiceClient modelClient;
 
@@ -58,6 +59,7 @@ class PredictionControllerTest {
     @BeforeEach
     void seedUser() {
         predictions.deleteAll();
+        batchJobs.deleteAll();
         users.deleteAll();
         users.save(new User("alice", encoder.encode("secret"), "Alice", "A", "alice@example.com"));
     }

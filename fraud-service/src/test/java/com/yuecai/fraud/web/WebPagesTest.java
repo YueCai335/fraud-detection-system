@@ -42,12 +42,14 @@ class WebPagesTest {
     @Autowired MockMvc mvc;
     @Autowired UserRepository users;
     @Autowired PredictionRepository predictions;
+    @Autowired com.yuecai.fraud.batch.BatchJobRepository batchJobs;
     @Autowired PasswordEncoder encoder;
     @MockitoBean ModelServiceClient modelClient;
 
     @BeforeEach
     void seedUser() {
         predictions.deleteAll();
+        batchJobs.deleteAll();
         users.deleteAll();
         users.save(new User("alice", encoder.encode("secret"), "Alice", "A", "alice@example.com"));
     }
@@ -128,6 +130,40 @@ class WebPagesTest {
                 .andExpect(model().attributeExists("error"))
                 .andExpect(model().attributeDoesNotExist("result"));
         assertThat(predictions.count()).isZero();
+    }
+
+    @Test
+    void batchUploadCreatesJobAndStatusIsPollableWithTheSession() throws Exception {
+        org.springframework.mock.web.MockMultipartFile file = new org.springframework.mock.web.MockMultipartFile(
+                "csvFile", "tx.csv", "text/csv", "1,3,9839.64,170136.0,160296.36,0.0,0.0\n".getBytes());
+
+        String location = mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .multipart("/batch").file(file).with(csrf()).with(user("alice")))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrlPattern("/batch/jobs/*"))
+                .andReturn().getResponse().getRedirectedUrl();
+        String id = location.substring(location.lastIndexOf('/') + 1);
+
+        mvc.perform(get("/batch/jobs/{id}", id).with(user("alice")))
+                .andExpect(status().isOk())
+                .andExpect(view().name("batch-job"))
+                .andExpect(model().attributeExists("job"));
+
+        mvc.perform(get("/batch/jobs/{id}/status", id).with(user("alice")))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.status").value("PENDING"));
+
+        // someone else's job -> 404 page, not a leak
+        mvc.perform(get("/batch/jobs/{id}", id).with(user("bob")))
+                .andExpect(status().isNotFound())
+                .andExpect(view().name("error/404"));
+
+        // the same file again lands on the same job (idempotent)
+        String again = mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .multipart("/batch").file(file).with(csrf()).with(user("alice")))
+                .andExpect(status().is3xxRedirection())
+                .andReturn().getResponse().getRedirectedUrl();
+        assertThat(again).isEqualTo(location);
     }
 
     @Test
