@@ -30,6 +30,7 @@ AWS_PROFILE=fraud terraform destroy
 
 Resources: VPC (2 public + 2 private subnets, no NAT), ECR ×2, ECS cluster + Fargate service
 (1 task: fraud-service + model-service sidecar), RDS MySQL db.t4g.micro (private, password in
-Secrets Manager), CloudWatch log group, IAM (ECS execution role, GitHub OIDC deploy role).
+Secrets Manager), S3 bucket for batch job files (private, 7-day expiry), CloudWatch log group,
+IAM (ECS execution role, ECS task role scoped to the bucket, GitHub OIDC deploy role).
 
 See `docs/deployment.md` for the log of actual deployments, timings and cost.

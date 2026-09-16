@@ -36,7 +36,31 @@ resource "aws_iam_role_policy" "ecs_execution_secrets" {
   policy = data.aws_iam_policy_document.ecs_execution_secrets.json
 }
 
-# No task role yet: the application itself does not call AWS APIs. Added when S3 arrives.
+# ---- ECS task role: what the application itself may call (only the batch bucket) ---------
+
+resource "aws_iam_role" "ecs_task" {
+  name               = "${var.name}-ecs-task"
+  assume_role_policy = data.aws_iam_policy_document.ecs_assume.json
+}
+
+data "aws_iam_policy_document" "ecs_task_s3" {
+  statement {
+    sid       = "ListBatchBucket"
+    actions   = ["s3:ListBucket"]
+    resources = [aws_s3_bucket.batch.arn]
+  }
+  statement {
+    sid       = "ReadWriteJobFiles"
+    actions   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
+    resources = ["${aws_s3_bucket.batch.arn}/jobs/*"]
+  }
+}
+
+resource "aws_iam_role_policy" "ecs_task_s3" {
+  name   = "batch-bucket"
+  role   = aws_iam_role.ecs_task.id
+  policy = data.aws_iam_policy_document.ecs_task_s3.json
+}
 
 # ---- GitHub Actions deploy role (OIDC, no long-lived keys) ---------------------------------
 
@@ -101,7 +125,7 @@ data "aws_iam_policy_document" "github_deploy" {
   statement {
     sid       = "PassExecutionRole"
     actions   = ["iam:PassRole"]
-    resources = [aws_iam_role.ecs_execution.arn]
+    resources = [aws_iam_role.ecs_execution.arn, aws_iam_role.ecs_task.arn]
     condition {
       test     = "StringEquals"
       variable = "iam:PassedToService"

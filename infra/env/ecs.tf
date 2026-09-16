@@ -49,6 +49,10 @@ locals {
         { name = "DB_USER", value = aws_db_instance.mysql.username },
         { name = "MODEL_SERVICE_URL", value = "http://localhost:5000" },
         { name = "SPRING_PROFILES_ACTIVE", value = var.spring_profiles },
+        # batch job files in S3; credentials come from the task role (default credential chain)
+        { name = "STORAGE_TYPE", value = "s3" },
+        { name = "STORAGE_BUCKET", value = aws_s3_bucket.batch.bucket },
+        { name = "AWS_REGION", value = var.region },
       ]
       secrets = [
         # RDS-managed secret is JSON {"username":..,"password":..}; ":password::" selects the key.
@@ -80,6 +84,7 @@ resource "aws_ecs_task_definition" "app" {
   cpu                      = var.task_cpu
   memory                   = var.task_memory
   execution_role_arn       = aws_iam_role.ecs_execution.arn
+  task_role_arn            = aws_iam_role.ecs_task.arn
   container_definitions    = jsonencode(local.container_definitions)
 
   runtime_platform {
