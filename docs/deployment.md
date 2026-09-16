@@ -29,6 +29,7 @@ Screenshots from that session: [single prediction](images/aws-single-prediction.
 
 ## After every destroy
 
-Check nothing is left that costs money: RDS instances and snapshots, ECS clusters, ECR
-repositories, non-default VPCs / ENIs / Elastic IPs, Secrets Manager (including scheduled
-deletions), log groups, custom IAM roles. The state bucket is the only thing that stays.
+Run `AWS_PROFILE=fraud scripts/aws-leftovers.sh`: it lists everything that could cost money (RDS
+instances and snapshots, ECS, ECR, load balancers, NAT gateways, VPCs / ENIs / Elastic IPs / EBS /
+EC2, Secrets Manager including scheduled deletions, log groups, custom IAM roles). Only the state
+bucket should remain.
