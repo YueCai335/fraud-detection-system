@@ -9,15 +9,25 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 import org.springframework.stereotype.Component;
 
 /**
  * Parses the batch-upload CSV: {@code step,type_code,amount,oldbalanceOrg,newbalanceOrig,oldbalanceDest,newbalanceDest}.
  * A header row is optional and detected the same way the legacy servlet did. Rows that cannot be
- * parsed are reported back with their line number instead of being silently zero-filled.
+ * parsed, or that fail the same Bean Validation constraints the single-transaction endpoint
+ * enforces, are reported back with their line number instead of being silently accepted.
  */
 @Component
 public class CsvTransactionParser {
+
+    private final Validator validator;
+
+    public CsvTransactionParser(Validator validator) {
+        this.validator = validator;
+    }
 
     public static final String EXPECTED_HEADER =
             "step,type_code,amount,oldbalanceOrg,newbalanceOrig,oldbalanceDest,newbalanceDest";
@@ -56,8 +66,9 @@ public class CsvTransactionParser {
                             Double.parseDouble(cols[4].strip()),
                             Double.parseDouble(cols[5].strip()),
                             Double.parseDouble(cols[6].strip()));
-                    if (!TransactionType.isValidCode(tx.typeCode())) {
-                        skipped.add("line " + lineNumber + ": type_code must be 0–4");
+                    String violation = firstViolation(tx);
+                    if (violation != null) {
+                        skipped.add("line " + lineNumber + ": " + violation);
                         continue;
                     }
                     rows.add(new Row(lineNumber, tx));
@@ -69,6 +80,16 @@ public class CsvTransactionParser {
             throw new UncheckedIOException(e);
         }
         return new ParseResult(rows, skipped);
+    }
+
+    /** Same constraints as {@code POST /api/v1/predictions}; returns e.g. "amount must be greater than or equal to 0". */
+    private String firstViolation(TransactionRequest tx) {
+        Set<ConstraintViolation<TransactionRequest>> violations = validator.validate(tx);
+        return violations.stream()
+                .map(v -> v.getPropertyPath() + " " + v.getMessage())
+                .sorted()
+                .findFirst()
+                .orElse(null);
     }
 
     static boolean looksLikeHeader(String line) {

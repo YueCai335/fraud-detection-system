@@ -14,10 +14,6 @@ public enum TransactionType {
         return code;
     }
 
-    public static boolean isValidCode(int code) {
-        return code >= 0 && code <= 4;
-    }
-
     public static TransactionType fromCode(int code) {
         for (TransactionType t : values()) {
             if (t.code == code) return t;
