@@ -2,8 +2,9 @@
 
 [![CI](https://github.com/YueCai335/fraud-detection-system/actions/workflows/ci.yml/badge.svg)](https://github.com/YueCai335/fraud-detection-system/actions/workflows/ci.yml)
 
-Scores PaySim-style mobile-money transactions for fraud, one at a time or from a CSV, and explains
-each flagged transaction with its top-3 SHAP features.
+Scores PaySim-style mobile-money transactions for fraud and explains each flagged transaction
+with its top-3 SHAP features. CSV scoring supports asynchronous jobs with progress tracking,
+checkpoint recovery, and result downloads from S3 (MinIO locally).
 
 It started as a Java EE course project (JSP/Servlets → JAX-WS SOAP → Flask) and was then migrated
 to a **Spring Boot REST service + Python model microservice**, keeping the trained model and the
@@ -20,15 +21,23 @@ flowchart LR
     subgraph FS[fraud-service · Spring Boot 3.5 / Java 17]
         direction TB
         MVC[Spring MVC<br/>controllers] --> SVC[PredictionService<br/>BatchPredictionService]
-        API[REST API<br/>/api/v1/predictions] --> SVC
+        API[REST API<br/>predictions + batch-jobs] --> SVC
+        MVC --> JOB[BatchJobService]
+        API --> JOB
+        JOB --> JPA
+        JOB --> OBJ[ObjectStore]
+        W[BatchJobWorker<br/>checkpoint + retry] --> JPA
+        W --> CL
+        W --> OBJ
         SEC[Spring Security] -.-> MVC
         SEC -.-> API
-        SVC --> CL[ModelServiceClient<br/>RestClient + timeouts]
+        SVC --> CL[ModelServiceClient<br/>RestClient + timeouts<br/>retry + circuit breaker]
         SVC --> JPA[Spring Data JPA]
     end
 
     CL -- "POST /predict<br/>POST /batch_predict" --> MS[model-service · Flask<br/>RandomForest + SHAP]
     JPA --> DB[(MySQL 8<br/>Flyway-migrated)]
+    OBJ --> S3[(S3 / MinIO<br/>input + result CSV)]
 ```
 
 | Component | Tech | Responsibility |
@@ -37,7 +46,7 @@ flowchart LR
 | [`model-service/`](model-service/) | Python 3.10, Flask, scikit-learn 1.7, SHAP, gunicorn, pytest | Loads the pickled RandomForest and scores feature vectors |
 | [`notebooks/`](notebooks/) | Jupyter | Data preparation, model comparison (DT / RF / KNN) and training |
 | `docker-compose.yml` | MySQL 8.4 + MinIO + the two services | One-command local environment |
-| [`infra/`](infra/) | Terraform | On-demand AWS environment: VPC, ECR, ECS Fargate, RDS, IAM (OIDC deploy role) |
+| [`infra/`](infra/) | Terraform | On-demand AWS environment: VPC, ECR, ECS Fargate, RDS, S3, IAM (OIDC deploy role and scoped task role) |
 | `.github/workflows/ci.yml` | GitHub Actions | pytest, Maven verify, then a compose-based end-to-end smoke test |
 | `.github/workflows/deploy.yml` | GitHub Actions | Manual: build linux/amd64 images, push to ECR by commit SHA, roll the ECS service |
 
@@ -49,7 +58,7 @@ Prerequisites: Docker Desktop. (JDK 17 and Python 3.10 only if you want to run t
 docker compose up --build
 ```
 
-Once all three containers report healthy:
+Once all four services report healthy:
 
 | What | URL |
 |---|---|
@@ -61,7 +70,8 @@ Once all three containers report healthy:
 
 ## Deployment (AWS, on demand)
 
-The same containers run on **AWS ECS Fargate + RDS MySQL**, provisioned with Terraform
+The same application containers run on **AWS ECS Fargate + RDS MySQL**, with **S3** storing
+batch input and result files, provisioned with Terraform
 ([`infra/`](infra/)) and deployed by a GitHub Actions workflow through an OIDC role (no stored
 keys). The environment is created for verification and demo sessions and destroyed afterwards —
 there is no always-on URL; run it locally with `docker compose up` or see
@@ -106,10 +116,12 @@ curl -u demo:demo123 'localhost:8080/api/v1/predictions?page=0&size=20'
 
 ### Asynchronous batch jobs
 
-For large files, submit a job instead of waiting on the request:
+Submit a CSV job to track processing progress and download the result when it completes.
+The default upload/request limit is 5 MB, and the worker accepts up to 100,000 valid rows:
 
 ```bash
-# 202 Accepted + Location. Idempotency-Key makes retries safe (without it, the file's SHA-256 is used).
+# A new job returns 202 + Location; a matching existing submission returns 200.
+# Idempotency-Key identifies the submission (the file's SHA-256 is used when omitted).
 curl -u demo:demo123 -H 'Idempotency-Key: run-42' -F file=@transactions.csv localhost:8080/api/v1/batch-jobs
 # poll: status PENDING/RUNNING/SUCCEEDED/FAILED, processedRows/totalRows, fraudCount, attempts, lastError
 curl -u demo:demo123 localhost:8080/api/v1/batch-jobs/<id>
@@ -121,11 +133,15 @@ curl -X POST -u demo:demo123 localhost:8080/api/v1/batch-jobs/<id>/retry
 
 How it works: the CSV goes to object storage (S3; MinIO in docker compose), a `batch_jobs` row is
 created, and an in-process worker claims PENDING rows with `SELECT … FOR UPDATE SKIP LOCKED` — the
-database is the queue, so several instances can run without extra infrastructure. Rows are scored in
-chunks of 500; each chunk is committed together with the job's `processed_rows` checkpoint, so a crash
-or a model outage loses at most one chunk and a retry resumes from there. Model calls are retried
+database stores the queue. Rows are scored in chunks of 500; each chunk is committed together
+with the job's `processed_rows` checkpoint. After an interrupted attempt, committed rows remain
+saved and a retry resumes at the next uncommitted chunk. Model calls are retried
 with back-off behind a circuit breaker (Resilience4j); a job gives up after 3 attempts and can be
 retried manually. Jobs whose worker stops heart-beating are reclaimed automatically.
+
+CSV rows use the same Bean Validation constraints as single-transaction requests; invalid rows
+are skipped and reported. In AWS, S3 keeps job files private and encrypted, with a seven-day
+lifecycle expiration. Result download URLs expire after 15 minutes.
 
 Errors are RFC 9457 problem details: `400` with a per-field `errors` map for validation,
 `503` when the model service is down or times out, `404` for someone else's batch.
@@ -168,7 +184,7 @@ See [model-service/README.md](model-service/README.md) for the endpoint contract
 .
 ├── docker-compose.yml
 ├── .github/workflows/         ci.yml (tests) · deploy.yml (manual AWS deploy)
-├── infra/                     Terraform: bootstrap (state bucket) · env (VPC, ECR, ECS, RDS, IAM)
+├── infra/                     Terraform: bootstrap (state bucket) · env (VPC, ECR, ECS, RDS, S3, IAM)
 ├── scripts/smoke.sh           end-to-end check used by CI, local verification and AWS deploys
 ├── docs/                      migration write-up, deployment log, course proposal
 ├── fraud-service/             Spring Boot (REST + JSP UI + JPA + Security)
