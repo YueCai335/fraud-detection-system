@@ -38,3 +38,4 @@ notes/
 !*.tfvars.example
 crash.log
 tfplan
+!databricks-etl/test_data/*.csv
