@@ -57,6 +57,8 @@ pipeline {
                 // Inside this container localhost:8080 is Jenkins' own UI, not the app.
                 // The stack's published ports are on the Docker Desktop host; this alias reaches it.
                 CI_HOST = 'host.docker.internal'
+                // ci/compose.ci.yml publishes the app here, clear of a developer's own stack on 8080.
+                CI_PORT = '18080'
             }
             steps {
                 sh 'docker compose up --build -d --wait --wait-timeout 300'
@@ -66,7 +68,7 @@ pipeline {
                 withCredentials([usernamePassword(credentialsId: 'smoke-login',
                                                   usernameVariable: 'SMOKE_USER',
                                                   passwordVariable: 'SMOKE_PASS')]) {
-                    sh 'scripts/smoke.sh http://$CI_HOST:8080 "$SMOKE_USER" "$SMOKE_PASS"'
+                    sh 'scripts/smoke.sh http://$CI_HOST:$CI_PORT "$SMOKE_USER" "$SMOKE_PASS"'
                 }
             }
             post {

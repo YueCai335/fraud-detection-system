@@ -44,9 +44,15 @@ The third stage is the odd one out on purpose. The first two get a throwaway con
 controller. The smoke test cannot work that way — it *drives* Docker (compose up, compose down),
 so it runs on the controller, which is where the Docker CLI lives.
 
-Two settings keep that stage from colliding with a developer's own stack on the same machine:
-`COMPOSE_PROJECT_NAME=fraud-ci` gives the CI containers their own names and volumes, so the
-`docker compose down -v` in `post` cannot wipe the MySQL volume of a stack someone is using.
+That stage shares the machine with whatever the developer is running, so it has to stay out of
+the way twice over. `COMPOSE_PROJECT_NAME=fraud-ci` gives the CI containers their own names and
+volumes, so the `docker compose down -v` in `post` cannot wipe the MySQL volume of a stack someone
+is using. That is not enough on its own — a project name does not isolate **published host
+ports**, and a build on a laptop with `docker compose up` already running dies at
+`Bind for 0.0.0.0:3306 failed: port is already allocated`. [`ci/compose.ci.yml`](../ci/compose.ci.yml)
+therefore stops publishing MySQL and model-service entirely (only fraud-service talks to them, over
+the compose network) and moves the two ports the smoke test needs to 18080 and 14566. A hosted
+runner never hits any of this, which is exactly why it only showed up here.
 
 ## The 403: a container called itself
 
