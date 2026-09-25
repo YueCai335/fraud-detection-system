@@ -1,0 +1,13 @@
+# Compose overrides for the Jenkins smoke-test stage (merged on top of docker-compose.yml).
+#
+# On a GitHub Actions runner the job and the containers share one host, so the app is at
+# localhost. Our Jenkins controller is itself a container: its own localhost:8080 is the
+# Jenkins UI, and the published app ports live on the Docker Desktop host. $CI_HOST
+# (set in the Jenkinsfile) is the alias that reaches that host from inside a container.
+#
+# Only the presigned-URL host has to change: fraud-service hands the client a download URL
+# built from STORAGE_PUBLIC_ENDPOINT, and the client here is curl inside the Jenkins container.
+services:
+  fraud-service:
+    environment:
+      STORAGE_PUBLIC_ENDPOINT: http://${CI_HOST}:9000
