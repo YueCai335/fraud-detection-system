@@ -59,7 +59,7 @@ storage:
   type: ${STORAGE_TYPE:memory}          # memory | s3
   bucket: ${STORAGE_BUCKET:}
   region: ${AWS_REGION:${AWS_DEFAULT_REGION:us-east-1}}
-  endpoint: ${STORAGE_ENDPOINT:}         # MinIO only
+  endpoint: ${STORAGE_ENDPOINT:}         # S3-compatible server only (LocalStack locally)
   public-endpoint: ${STORAGE_PUBLIC_ENDPOINT:}
   access-key: ${STORAGE_ACCESS_KEY:}
   secret-key: ${STORAGE_SECRET_KEY:}
