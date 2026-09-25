@@ -21,19 +21,19 @@ services:
       retries: 20
 
   # S3-compatible object store for batch job files (S3 itself in AWS).
-  minio:
-    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
-    command: server /data --console-address ":9001"
+  # LocalStack, not MinIO: MinIO stopped publishing public images (quay.io now needs
+  # credentials, docker.io/minio/minio is gone), which broke `docker compose up` and the
+  # CI smoke test on any machine without a cached copy.
+  # Object data is not persisted across restarts here; the bucket is recreated on startup
+  # by STORAGE_CREATE_BUCKET, and the batch_jobs rows in MySQL do survive.
+  localstack:
+    image: localstack/localstack:3
     environment:
-      MINIO_ROOT_USER: minio
-      MINIO_ROOT_PASSWORD: minio12345
+      SERVICES: s3
     ports:
-      - "9000:9000"   # S3 API (also the presigned-URL host the browser uses)
-      - "9001:9001"   # web console (minio / minio12345)
-    volumes:
-      - minio-data:/data
+      - "4566:4566"   # one endpoint for every AWS service it emulates (also the presigned-URL host)
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -56,10 +56,10 @@ services:
       SPRING_PROFILES_ACTIVE: demo   # seeds demo/demo123 + sample history; omit in real environments
       STORAGE_TYPE: s3
       STORAGE_BUCKET: fraud-batch
-      STORAGE_ENDPOINT: http://minio:9000
-      STORAGE_PUBLIC_ENDPOINT: http://localhost:9000   # presigned URLs must be reachable from the browser
-      STORAGE_ACCESS_KEY: minio
-      STORAGE_SECRET_KEY: minio12345
+      STORAGE_ENDPOINT: http://localstack:4566
+      STORAGE_PUBLIC_ENDPOINT: http://localhost:4566   # presigned URLs must be reachable from the browser
+      STORAGE_ACCESS_KEY: test        # LocalStack accepts any credentials; 'test' is its convention
+      STORAGE_SECRET_KEY: test
       STORAGE_CREATE_BUCKET: "true"
     ports:
       - "8080:8080"
@@ -68,7 +68,7 @@ services:
         condition: service_healthy
       model-service:
         condition: service_healthy
-      minio:
+      localstack:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -fs http://localhost:8080/actuator/health || exit 1"]
@@ -79,4 +79,3 @@ services:
 
 volumes:
   mysql-data:
-  minio-data:

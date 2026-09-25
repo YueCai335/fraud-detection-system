@@ -5,7 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * {@code storage.type=memory} (default; tests, plain local runs) or {@code storage.type=s3}.
  * For S3: {@code bucket} is required; {@code endpoint}/{@code public-endpoint}/credentials are
- * only for S3-compatible servers such as MinIO. In AWS the default credential chain (task role) is used.
+ * only for S3-compatible servers such as LocalStack. In AWS the default credential chain (task role) is used.
  */
 @ConfigurationProperties(prefix = "storage")
 public record StorageProperties(
