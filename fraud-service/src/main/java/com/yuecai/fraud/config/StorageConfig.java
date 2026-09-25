@@ -50,7 +50,7 @@ public class StorageConfig {
         var s3Builder = S3Client.builder()
                 .region(region)
                 .credentialsProvider(credentials)
-                // MinIO serves buckets as /bucket/key, not bucket.host/key
+                // S3-compatible servers serve buckets as /bucket/key, not bucket.host/key
                 .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(custom).build());
         if (custom) {
             s3Builder.endpointOverride(URI.create(props.endpoint()));
@@ -58,7 +58,7 @@ public class StorageConfig {
         S3Client s3 = s3Builder.build();
 
         // Presigned URLs are opened by the user's browser, so they must use the address the
-        // browser can reach (e.g. localhost:9000, while the app talks to minio:9000 inside compose).
+        // browser can reach (e.g. localhost:4566, while the app talks to localstack:4566 in compose).
         String presignEndpoint = props.publicEndpoint() != null && !props.publicEndpoint().isBlank()
                 ? props.publicEndpoint() : props.endpoint();
         S3Presigner.Builder presignerBuilder = S3Presigner.builder()
@@ -77,7 +77,7 @@ public class StorageConfig {
         return new S3ObjectStore(s3, presigner, props.bucket());
     }
 
-    /** Local convenience (MinIO). In AWS the bucket is created by Terraform. */
+    /** Local convenience (LocalStack). In AWS the bucket is created by Terraform. */
     private static void ensureBucket(S3Client s3, String bucket) {
         try {
             s3.headBucket(HeadBucketRequest.builder().bucket(bucket).build());

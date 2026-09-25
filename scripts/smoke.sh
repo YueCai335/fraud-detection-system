@@ -77,7 +77,7 @@ done
 [ "$status" = "SUCCEEDED" ] || fail "job $job ended as $status" "$TMP/job.json"
 processed="$(json "d['processedRows']" "$TMP/job.json")"
 [ "$processed" = "8" ] || fail "job processed $processed rows, expected 8" "$TMP/job.json"
-# -L follows the 302 to a presigned URL when the store is S3/MinIO
+# -L follows the 302 to a presigned URL when the store is S3 or an S3-compatible server
 curl -fsSL -u "$USER:$PASS" "$BASE/api/v1/batch-jobs/$job/result" -o "$TMP/result.csv" || fail "result download failed" "$TMP/result.csv"
 lines="$(wc -l < "$TMP/result.csv" | tr -d ' ')"
 [ "$lines" = "9" ] || fail "result CSV has $lines lines, expected 9 (header + 8)" "$TMP/result.csv"

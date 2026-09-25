@@ -10,4 +10,4 @@
 services:
   fraud-service:
     environment:
-      STORAGE_PUBLIC_ENDPOINT: http://${CI_HOST}:9000
+      STORAGE_PUBLIC_ENDPOINT: http://${CI_HOST}:4566

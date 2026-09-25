@@ -5,7 +5,7 @@ import java.time.Duration;
 import java.util.Optional;
 
 /**
- * Where batch job files live. S3 in AWS, MinIO in docker compose, in-memory in tests —
+ * Where batch job files live. S3 in AWS, LocalStack in docker compose, in-memory in tests —
  * the application code never knows which.
  */
 public interface ObjectStore {

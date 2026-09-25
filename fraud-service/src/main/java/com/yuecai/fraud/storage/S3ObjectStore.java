@@ -12,7 +12,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 
-/** Amazon S3, or anything speaking its API (MinIO in docker compose). */
+/** Amazon S3, or anything speaking its API (LocalStack in docker compose). */
 public class S3ObjectStore implements ObjectStore {
 
     private final S3Client s3;
