@@ -51,6 +51,12 @@ pipeline {
                 // Own project name, so the CI stack never collides with the
                 // `docker compose up` stack a developer has running on the same machine.
                 COMPOSE_PROJECT_NAME = 'fraud-ci'
+                // Every `docker compose` below reads both files (compose honours COMPOSE_FILE),
+                // so the override cannot be forgotten on one of them.
+                COMPOSE_FILE = 'docker-compose.yml:ci/compose.ci.yml'
+                // Inside this container localhost:8080 is Jenkins' own UI, not the app.
+                // The stack's published ports are on the Docker Desktop host; this alias reaches it.
+                CI_HOST = 'host.docker.internal'
             }
             steps {
                 sh 'docker compose up --build -d --wait --wait-timeout 300'
@@ -60,7 +66,7 @@ pipeline {
                 withCredentials([usernamePassword(credentialsId: 'smoke-login',
                                                   usernameVariable: 'SMOKE_USER',
                                                   passwordVariable: 'SMOKE_PASS')]) {
-                    sh 'scripts/smoke.sh http://localhost:8080 "$SMOKE_USER" "$SMOKE_PASS"'
+                    sh 'scripts/smoke.sh http://$CI_HOST:8080 "$SMOKE_USER" "$SMOKE_PASS"'
                 }
             }
             post {
