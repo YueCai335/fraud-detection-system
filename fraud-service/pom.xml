@@ -98,7 +98,7 @@
       <artifactId>spring-boot-starter-security</artifactId>
     </dependency>
 
-    <!-- Object storage for batch job input/result files (S3, or MinIO locally) -->
+    <!-- Object storage for batch job input/result files (S3, or LocalStack locally) -->
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>s3</artifactId>
