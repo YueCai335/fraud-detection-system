@@ -49,6 +49,8 @@ flowchart LR
 | [`infra/`](infra/) | Terraform | On-demand AWS environment: VPC, ECR, ECS Fargate, RDS, S3, IAM (OIDC deploy role and scoped task role) |
 | `.github/workflows/ci.yml` | GitHub Actions | pytest, Maven verify, then a compose-based end-to-end smoke test |
 | `.github/workflows/deploy.yml` | GitHub Actions | Manual: build linux/amd64 images, push to ECR by commit SHA, roll the ECS service |
+| [`Jenkinsfile`](Jenkinsfile) | Jenkins | The same three stages as `ci.yml` on a local Jenkins controller ([write-up](docs/ci-jenkins.md)) |
+| [`databricks-etl/`](databricks-etl/) | Databricks, PySpark, Delta tables | Separate batch ETL over PaySim: bronze/silver/gold layers, named data-quality rules, quarantine table, reconciliation checks ([README](databricks-etl/README.md)) |
 
 ## Quick start
 
@@ -184,9 +186,10 @@ See [model-service/README.md](model-service/README.md) for the endpoint contract
 .
 ├── docker-compose.yml
 ├── .github/workflows/         ci.yml (tests) · deploy.yml (manual AWS deploy)
+├── Jenkinsfile                the same CI pipeline on Jenkins (controller in ci/jenkins/)
 ├── infra/                     Terraform: bootstrap (state bucket) · env (VPC, ECR, ECS, RDS, S3, IAM)
 ├── scripts/smoke.sh           end-to-end check used by CI, local verification and AWS deploys
-├── docs/                      migration write-up, deployment log, course proposal
+├── docs/                      migration write-up, deployment log, Jenkins write-up, course proposal
 ├── fraud-service/             Spring Boot (REST + JSP UI + JPA + Security)
 │   ├── src/main/java/com/yuecai/fraud/
 │   │   ├── api/               REST controllers, problem-detail handler
@@ -201,7 +204,8 @@ See [model-service/README.md](model-service/README.md) for the endpoint contract
 │   ├── src/main/webapp/WEB-INF/views/     JSP pages
 │   └── src/test/java/         JUnit 5, Mockito, MockRestServiceServer, MockMvc
 ├── model-service/             Flask + scikit-learn + SHAP, Dockerfile, pytest
-└── notebooks/                 training notebook and feature list
+├── notebooks/                 training notebook and feature list
+└── databricks-etl/            separate Databricks ETL module (PySpark, Delta tables)
 ```
 
 ## Model
